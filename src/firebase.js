@@ -1,15 +1,16 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 
+// Configuration values are now securely pulled from the .env file
 const firebaseConfig = {
-  apiKey: "AIzaSyA9mTTubBboHDofP0zsvCuiczfXn4VIoBg",
-  authDomain: "weather-dashboard-bf169.firebaseapp.com",
-  databaseURL: "https://weather-dashboard-bf169-default-rtdb.firebaseio.com",
-  projectId: "weather-dashboard-bf169",
-  storageBucket: "weather-dashboard-bf169.firebasestorage.app",
-  messagingSenderId: "950661619801",
-  appId: "1:950661619801:web:5e06f9071e7cd7ee1fd148",
-  measurementId: "G-38RWY73PB9"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
