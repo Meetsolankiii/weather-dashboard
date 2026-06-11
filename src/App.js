@@ -7,12 +7,25 @@ import SearchHistory from './components/SearchHistory';
 import Loader from './components/Loader';
 import ErrorMessage from './components/ErrorMessage';
 
-// Authentication Components
+// New Components
+import ForecastCard from './components/ForecastCard';
+import HourlyForecast from './components/HourlyForecast';
+import AQICard from './components/AQICard';
+import SunriseSunset from './components/SunriseSunset';
+import WeatherTips from './components/WeatherTips';
+import TemperatureChart from './components/TemperatureChart';
+import WeatherComparison from './components/WeatherComparison';
+
+// Authentication
 import Login from './Authentication/Login';
 import Register from './Authentication/Register';
 
 // Weather API
-import { fetchWeatherData } from './services/weatherApi';
+import {
+  fetchWeatherData,
+  fetchForecastData,
+  fetchAQIData
+} from './services/weatherApi';
 
 // Firebase
 import { ref, get, set } from "firebase/database";
@@ -22,84 +35,86 @@ import './App.css';
 
 const App = () => {
 
-  // Logged-in user
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] =
+    useState(null);
 
-  // login / register screen
-  const [authView, setAuthView] = useState('login');
+  const [authView, setAuthView] =
+    useState('login');
 
-  // Weather data
-  const [weatherData, setWeatherData] = useState(null);
+  const [weatherData, setWeatherData] =
+    useState(null);
 
-  // Loading state
-  const [isLoading, setIsLoading] = useState(false);
+  const [forecastData, setForecastData] =
+    useState(null);
 
-  // Error state
-  const [error, setError] = useState(null);
+  const [aqiData, setAqiData] =
+    useState(null);
 
-  // Search history
-  const [searchHistory, setSearchHistory] = useState([]);
+  const [isLoading, setIsLoading] =
+    useState(false);
 
-  
+  const [error, setError] =
+    useState(null);
 
-// ==========================================================
-// Login Success
-// ==========================================================
-const handleLoginSuccess = async (userData) => {
+  const [searchHistory, setSearchHistory] =
+    useState([]);
 
-  // Remove password
-  const { password: _, ...safeUser } = userData;
+  // =====================================
+  // Login Success
+  // =====================================
+  const handleLoginSuccess = async (
+    userData
+  ) => {
 
-  // Set logged in user
-  setCurrentUser(safeUser);
+    const {
+      password: _,
+      ...safeUser
+    } = userData;
 
-  try {
+    setCurrentUser(safeUser);
 
-    // Load search history
-    const historyRef = ref(
-      db,
-      `history/${safeUser.username}`
-    );
+    try {
 
-    const snapshot = await get(historyRef);
+      const historyRef = ref(
+        db,
+        `history/${safeUser.username}`
+      );
 
-    if (snapshot.exists()) {
+      const snapshot =
+        await get(historyRef);
 
-      setSearchHistory(snapshot.val());
+      if (snapshot.exists()) {
 
-    } else {
+        setSearchHistory(
+          snapshot.val()
+        );
 
-      setSearchHistory([]);
+      }
 
-    }
-
-    // Load default city weather
-    const data =
-      await fetchWeatherData(
+      await handleSearch(
         safeUser.defaultCity
       );
 
-    setWeatherData(data);
+    } catch (err) {
 
-  } catch (err) {
+      console.error(err);
 
-    console.error(
-      "Error loading user data:",
-      err
-    );
+    }
 
-  }
+  };
 
-};
-
-  // ==========================================================
+  // =====================================
   // Logout
-  // ==========================================================
+  // =====================================
   const handleLogout = () => {
 
     setCurrentUser(null);
 
     setWeatherData(null);
+
+    setForecastData(null);
+
+    setAqiData(null);
 
     setSearchHistory([]);
 
@@ -109,70 +124,93 @@ const handleLoginSuccess = async (userData) => {
 
   };
 
-  // ==========================================================
-  // Update Search History
-  // ==========================================================
-  const updateHistoryOnFirebase = async (
-    city,
-    currentHistoryList
-  ) => {
+  // =====================================
+  // Update History
+  // =====================================
+  const updateHistoryOnFirebase =
+    async (
+      city,
+      currentHistoryList
+    ) => {
 
-    if (!currentUser) return;
+      if (!currentUser) return;
 
-    const filtered =
-      currentHistoryList.filter(
-        item =>
-          item.toLowerCase() !== city.toLowerCase()
-      );
+      const filtered =
+        currentHistoryList.filter(
+          item =>
+            item.toLowerCase() !==
+            city.toLowerCase()
+        );
 
-    const completeNewHistory =
-      [city, ...filtered].slice(0, 5);
+      const completeNewHistory =
+        [city, ...filtered].slice(
+          0,
+          5
+        );
 
-    setSearchHistory(completeNewHistory);
-
-    try {
-
-      await set(
-        ref(
-          db,
-          `history/${currentUser.username}`
-        ),
+      setSearchHistory(
         completeNewHistory
       );
 
-    } catch (err) {
+      try {
 
-      console.error(
-        "Error writing history to Firebase:",
-        err
-      );
+        await set(
+          ref(
+            db,
+            `history/${currentUser.username}`
+          ),
+          completeNewHistory
+        );
 
-    }
+      } catch (err) {
 
-  };
+        console.error(err);
 
-  // ==========================================================
+      }
+
+    };
+
+  // =====================================
   // Search Weather
-  // ==========================================================
-  const handleSearch = async (city) => {
+  // =====================================
+  const handleSearch = async (
+    city
+  ) => {
 
     setIsLoading(true);
 
     setError(null);
 
-    setWeatherData(null);
-
     try {
 
-      const data =
-        await fetchWeatherData(city);
+      const weather =
+        await fetchWeatherData(
+          city
+        );
 
-      setWeatherData(data);
+      setWeatherData(weather);
+
+      const forecast =
+        await fetchForecastData(
+          city
+        );
+
+      setForecastData(
+        forecast
+      );
+
+      const aqi =
+        await fetchAQIData(
+          weather.coord.lat,
+          weather.coord.lon
+        );
+
+      setAqiData(aqi);
 
       if (currentUser) {
 
         await updateHistoryOnFirebase(
-          data.name,
+          weather.name,
           searchHistory
         );
 
@@ -193,16 +231,18 @@ const handleLoginSuccess = async (userData) => {
 
   };
 
-  // ==========================================================
+  // =====================================
   // Authentication Screen
-  // ==========================================================
+  // =====================================
   if (!currentUser) {
 
     return (
 
       <div className="auth-container">
 
-        <h1>Skyline Weather</h1>
+        <h1>
+          Skyline Weather
+        </h1>
 
         <p>
           Real-time atmospheric insights
@@ -218,14 +258,18 @@ const handleLoginSuccess = async (userData) => {
                     handleLoginSuccess
                   }
                   onSwitchToRegister={() =>
-                    setAuthView('register')
+                    setAuthView(
+                      'register'
+                    )
                   }
                 />
               )
               : (
                 <Register
                   onSwitchToLogin={() =>
-                    setAuthView('login')
+                    setAuthView(
+                      'login'
+                    )
                   }
                 />
               )
@@ -239,9 +283,9 @@ const handleLoginSuccess = async (userData) => {
 
   }
 
-  // ==========================================================
+  // =====================================
   // Dashboard
-  // ==========================================================
+  // =====================================
   return (
 
     <div className="app">
@@ -251,18 +295,24 @@ const handleLoginSuccess = async (userData) => {
         <div>
 
           <h2>
-            Welcome, {currentUser.fullName}
+            Welcome,
+            {" "}
+            {currentUser.fullName}
           </h2>
 
           <p>
-            Home City: {currentUser.defaultCity}
+            Home City:
+            {" "}
+            {currentUser.defaultCity}
           </p>
 
         </div>
 
         <button
           className="logout-btn"
-          onClick={handleLogout}
+          onClick={
+            handleLogout
+          }
         >
           Log Out
         </button>
@@ -272,11 +322,17 @@ const handleLoginSuccess = async (userData) => {
       <main className="dashboard-main">
 
         <SearchBar
-          onSearch={handleSearch}
-          isLoading={isLoading}
+          onSearch={
+            handleSearch
+          }
+          isLoading={
+            isLoading
+          }
         />
 
-        {isLoading && <Loader />}
+        {isLoading &&
+          <Loader />
+        }
 
         {error && (
           <ErrorMessage
@@ -284,17 +340,52 @@ const handleLoginSuccess = async (userData) => {
           />
         )}
 
-        {
-          weatherData &&
+        {weatherData &&
           !isLoading && (
-            <WeatherCard
-              data={weatherData}
-            />
+            <>
+              <WeatherCard
+                data={weatherData}
+              />
+
+              <SunriseSunset
+                weather={weatherData}
+              />
+
+              <WeatherTips
+                weather={weatherData}
+              />
+
+              <AQICard
+                aqi={aqiData}
+              />
+
+              <HourlyForecast
+                forecast={
+                  forecastData
+                }
+              />
+
+              <ForecastCard
+                forecast={
+                  forecastData
+                }
+              />
+
+              <TemperatureChart
+                forecast={
+                  forecastData
+                }
+              />
+            </>
           )
         }
 
+        <WeatherComparison />
+
         <SearchHistory
-          history={searchHistory}
+          history={
+            searchHistory
+          }
           onHistoryItemClick={
             handleSearch
           }

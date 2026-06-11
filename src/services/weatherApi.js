@@ -1,46 +1,74 @@
 import axios from "axios";
 
-const BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
+const API_KEY =
+  process.env.REACT_APP_OPENWEATHER_API_KEY;
 
-// OpenWeather API key is now loaded securely from environment variables
-const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY;
+const WEATHER_URL =
+  "https://api.openweathermap.org/data/2.5/weather";
 
-/**
- * Fetch weather data from OpenWeather API
- *
- * @param {string} city - Name of the city entered by user
- * @returns {Promise<Object>} Weather data object
- */
+const GEO_URL =
+  "https://api.openweathermap.org/geo/1.0/direct";
+
+const FORECAST_URL =
+  "https://api.openweathermap.org/data/2.5/forecast";
+
+const AIR_URL =
+  "https://api.openweathermap.org/data/2.5/air_pollution";
+
 export const fetchWeatherData = async (city) => {
-
-  if (!city || city.trim() === "") {
-    throw new Error("Please enter a city name.");
-  }
-
-  try {
-    const response = await axios.get(BASE_URL, {
-      params: {
-        q: city,
-        appid: API_KEY, // Uses the secure token variable
-        units: "metric",
-      },
-    });
-
-    return response.data;
-
-  } catch (error) {
-    if (error.response) {
-      if (error.response.status === 404) {
-        throw new Error("City not found. Please enter a valid city name.");
-      }
-      if (error.response.status === 401) {
-        throw new Error("Invalid API Key. Please check your OpenWeatherMap API key.");
-      }
-      throw new Error(error.response.data.message || "Failed to fetch weather data.");
-    } else if (error.request) {
-      throw new Error("Network error. Please check your internet connection.");
-    } else {
-      throw new Error(error.message || "Something went wrong.");
+  const response = await axios.get(WEATHER_URL, {
+    params: {
+      q: city,
+      appid: API_KEY,
+      units: "metric"
     }
-  }
+  });
+
+  return response.data;
+};
+
+export const fetchForecastData = async (city) => {
+
+  const geo = await axios.get(GEO_URL, {
+    params: {
+      q: city,
+      limit: 1,
+      appid: API_KEY
+    }
+  });
+
+  const { lat, lon } = geo.data[0];
+
+  const forecast = await axios.get(
+    FORECAST_URL,
+    {
+      params: {
+        lat,
+        lon,
+        appid: API_KEY,
+        units: "metric"
+      }
+    }
+  );
+
+  return forecast.data;
+};
+
+export const fetchAQIData = async (
+  lat,
+  lon
+) => {
+
+  const response = await axios.get(
+    AIR_URL,
+    {
+      params: {
+        lat,
+        lon,
+        appid: API_KEY
+      }
+    }
+  );
+
+  return response.data;
 };
