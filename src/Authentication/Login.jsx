@@ -1,132 +1,122 @@
 import React, { useState } from 'react';
 
-// Firebase functions used to read data from Realtime Database
 import { ref, get } from "firebase/database";
-
-// Firebase database connection object
 import { db } from "../firebase";
 
-// Login component receives two functions from App.js
-// onLoginSuccess -> called when login is successful
-// onSwitchToRegister -> opens registration page
-const Login = ({ onLoginSuccess, onSwitchToRegister }) => {
+import Swal from 'sweetalert2';
 
-  // Stores username entered by user
+const Login = ({
+  onLoginSuccess,
+  onSwitchToRegister
+}) => {
+
   const [username, setUsername] = useState('');
-
-  // Stores password entered by user
   const [password, setPassword] = useState('');
 
-  // Stores error messages
-  const [error, setError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] =
+    useState(false);
 
-  // Controls loading state while login request is running
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-
-  // =====================================================
-  // Called when Login button is clicked
-  // =====================================================
   const handleSubmit = async (e) => {
 
-    // Prevent page refresh after form submission
     e.preventDefault();
 
-    // Clear previous error message
-    setError('');
+    const cleanUsername =
+      username.trim().toLowerCase();
 
-    // Convert username to lowercase and remove spaces
-    // This prevents issues like Meet and meet being treated differently
-    const cleanUsername = username.trim().toLowerCase();
-
-    // Check whether both fields are filled
     if (!cleanUsername || !password) {
-      setError('Please enter both your credentials.');
+
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Information',
+        text: 'Please enter username and password.'
+      });
+
       return;
     }
 
-    // Start loading state
     setIsLoggingIn(true);
 
     try {
 
-      // Create Firebase path:
-      // users/meet
-      // users/john
-      // users/admin
       const userRef = ref(
         db,
         `users/${cleanUsername}`
       );
 
-      // Read user data from Firebase
       const snapshot = await get(userRef);
 
-      // If username does not exist
+      // User not found
       if (!snapshot.exists()) {
 
-        setError('User record does not exist.');
+        await Swal.fire({
+          icon: 'error',
+          title: 'Login Failed',
+          text: 'User record does not exist.'
+        });
 
         setIsLoggingIn(false);
         return;
       }
 
-      // Convert Firebase data into JavaScript object
       const userData = snapshot.val();
 
-      // Verify password entered by user
+      // Wrong password
       if (userData.password !== password) {
 
-        setError('Incorrect security password entered.');
+        await Swal.fire({
+          icon: 'error',
+          title: 'Login Failed',
+          text: 'Incorrect password.'
+        });
 
         setIsLoggingIn(false);
         return;
       }
 
-      // =====================================================
-      // Login successful
-      // Send user data back to App.js
-      // =====================================================
+      // Success Alert
+      await Swal.fire({
+        icon: 'success',
+        title: 'Login Successful',
+        text: `Welcome ${userData.fullName}!`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      // Redirect to Dashboard
       onLoginSuccess(userData);
 
     } catch (err) {
 
-      // Firebase connection error
-      setError(
-        'Connection failure communicating with Firebase server.'
-      );
+      Swal.fire({
+        icon: 'error',
+        title: 'Connection Error',
+        text:
+          'Unable to communicate with Firebase.'
+      });
 
     } finally {
 
-      // Stop loading spinner
       setIsLoggingIn(false);
+
     }
+
   };
 
   return (
-    <div className="auth-card">
 
-      {/* Login page heading */}
+    <div>
+
       <h2>Welcome Back</h2>
 
-      {/* Small description */}
       <p>
         Verify global credentials database profile
       </p>
 
-      {/* Display error message if exists */}
-      {error && (
-        <div className="auth-error">
-          {error}
-        </div>
-      )}
-
-      {/* Login Form */}
       <form
         onSubmit={handleSubmit}
         className="auth-form"
       >
 
-        {/* Username Input */}
         <div className="input-group">
 
           <label>Username</label>
@@ -134,20 +124,15 @@ const Login = ({ onLoginSuccess, onSwitchToRegister }) => {
           <input
             type="text"
             value={username}
-
-            // Update username state while typing
             onChange={(e) =>
               setUsername(e.target.value)
             }
-
             placeholder="Username"
-
-            // Disable input while login request is running
             disabled={isLoggingIn}
           />
+
         </div>
 
-        {/* Password Input */}
         <div className="input-group">
 
           <label>Password</label>
@@ -155,36 +140,31 @@ const Login = ({ onLoginSuccess, onSwitchToRegister }) => {
           <input
             type="password"
             value={password}
-
-            // Update password state while typing
             onChange={(e) =>
               setPassword(e.target.value)
             }
-
             placeholder="••••••••"
-
             disabled={isLoggingIn}
           />
+
         </div>
 
-        {/* Login Button */}
         <button
           type="submit"
           className="auth-btn"
           disabled={isLoggingIn}
         >
 
-          {/* Change button text while loading */}
-          {isLoggingIn
-            ? 'Authenticating...'
-            : 'Log In'
+          {
+            isLoggingIn
+              ? 'Authenticating...'
+              : 'Log In'
           }
 
         </button>
 
       </form>
 
-      {/* Switch to Register Page */}
       <p className="auth-footer-text">
 
         Need an isolated profile node?
@@ -200,7 +180,9 @@ const Login = ({ onLoginSuccess, onSwitchToRegister }) => {
       </p>
 
     </div>
+
   );
+
 };
 
 export default Login;

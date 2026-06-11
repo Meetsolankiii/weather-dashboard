@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-// UI Components used in dashboard
+// UI Components
 import SearchBar from './components/SearchBar';
 import WeatherCard from './components/WeatherCard';
 import SearchHistory from './components/SearchHistory';
@@ -11,10 +11,10 @@ import ErrorMessage from './components/ErrorMessage';
 import Login from './Authentication/Login';
 import Register from './Authentication/Register';
 
-// Weather API function
+// Weather API
 import { fetchWeatherData } from './services/weatherApi';
 
-// Firebase Realtime Database functions
+// Firebase
 import { ref, get, set } from "firebase/database";
 import { db } from "./firebase";
 
@@ -22,45 +22,23 @@ import './App.css';
 
 const App = () => {
 
-  // Stores currently logged-in user
+  // Logged-in user
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Controls whether Login or Register screen is shown
+  // login / register screen
   const [authView, setAuthView] = useState('login');
 
-  // Stores weather information received from OpenWeather API
+  // Weather data
   const [weatherData, setWeatherData] = useState(null);
 
-  // Controls loading spinner while API request is running
+  // Loading state
   const [isLoading, setIsLoading] = useState(false);
 
-  // Stores API or Firebase error messages
+  // Error state
   const [error, setError] = useState(null);
 
-  // Stores last 5 searched cities
+  // Search history
   const [searchHistory, setSearchHistory] = useState([]);
-
-  // ==========================================================
-  // Runs once when application starts
-  // Checks if user session exists in localStorage
-  // ==========================================================
-  useEffect(() => {
-
-    const savedUser = localStorage.getItem('fb_weather_session');
-
-    if (savedUser) {
-
-      // Convert JSON string back to JavaScript object
-      const parsedUser = JSON.parse(savedUser);
-
-      // Restore logged-in user
-      setCurrentUser(parsedUser);
-
-      // Load user's weather and search history
-      loadUserData(parsedUser);
-    }
-
-  }, []);
 
   // ==========================================================
   // Load user-specific information
@@ -72,7 +50,6 @@ const App = () => {
 
     try {
 
-      // Read search history from Firebase
       const historyRef = ref(
         db,
         `history/${user.username}`
@@ -82,12 +59,10 @@ const App = () => {
 
       if (snapshot.exists()) {
 
-        // Load history into state
         setSearchHistory(snapshot.val());
 
       } else {
 
-        // No history found
         setSearchHistory([]);
 
       }
@@ -100,75 +75,99 @@ const App = () => {
       );
 
     }
+
   };
 
-  // ==========================================================
-  // Called after successful login
-  // ==========================================================
-  const handleLoginSuccess = (userData) => {
+// ==========================================================
+// Login Success
+// ==========================================================
+const handleLoginSuccess = async (userData) => {
 
-    // Remove password before storing session
-    const { password: _, ...safeUser } = userData;
+  // Remove password
+  const { password: _, ...safeUser } = userData;
 
-    // Save session into browser localStorage
-    localStorage.setItem(
-      'fb_weather_session',
-      JSON.stringify(safeUser)
+  // Set logged in user
+  setCurrentUser(safeUser);
+
+  try {
+
+    // Load search history
+    const historyRef = ref(
+      db,
+      `history/${safeUser.username}`
     );
 
-    // Set logged-in user
-    setCurrentUser(safeUser);
+    const snapshot = await get(historyRef);
 
-    // Load user's weather and history
-    loadUserData(safeUser);
-  };
+    if (snapshot.exists()) {
+
+      setSearchHistory(snapshot.val());
+
+    } else {
+
+      setSearchHistory([]);
+
+    }
+
+    // Load default city weather
+    const data =
+      await fetchWeatherData(
+        safeUser.defaultCity
+      );
+
+    setWeatherData(data);
+
+  } catch (err) {
+
+    console.error(
+      "Error loading user data:",
+      err
+    );
+
+  }
+
+};
 
   // ==========================================================
-  // Logout user
+  // Logout
   // ==========================================================
   const handleLogout = () => {
 
-    // Remove stored session
-    localStorage.removeItem('fb_weather_session');
-
-    // Clear user information
     setCurrentUser(null);
 
-    // Clear weather card
     setWeatherData(null);
 
-    // Clear search history
     setSearchHistory([]);
+
+    setError(null);
+
+    setAuthView('login');
+
   };
 
   // ==========================================================
-  // Save search history into Firebase
+  // Update Search History
   // ==========================================================
   const updateHistoryOnFirebase = async (
     city,
     currentHistoryList
   ) => {
 
-    // Do nothing if no user is logged in
     if (!currentUser) return;
 
-    // Remove duplicate city names
     const filtered =
       currentHistoryList.filter(
         item =>
           item.toLowerCase() !== city.toLowerCase()
       );
 
-    // Add latest city at top and keep only 5 records
     const completeNewHistory =
       [city, ...filtered].slice(0, 5);
 
-    // Update UI instantly
     setSearchHistory(completeNewHistory);
 
     try {
 
-      // Save updated history to Firebase
       await set(
         ref(
           db,
@@ -185,32 +184,27 @@ const App = () => {
       );
 
     }
+
   };
 
   // ==========================================================
-  // Main Weather Search Function
+  // Search Weather
   // ==========================================================
   const handleSearch = async (city) => {
 
-    // Start loading state
     setIsLoading(true);
 
-    // Clear old errors
     setError(null);
 
-    // Clear previous weather data
     setWeatherData(null);
 
     try {
 
-      // Call OpenWeather API
       const data =
         await fetchWeatherData(city);
 
-      // Store weather information
       setWeatherData(data);
 
-      // Save search history if user is logged in
       if (currentUser) {
 
         await updateHistoryOnFirebase(
@@ -222,7 +216,6 @@ const App = () => {
 
     } catch (err) {
 
-      // Show API error
       setError(
         err.message ||
         'Something went wrong.'
@@ -230,14 +223,14 @@ const App = () => {
 
     } finally {
 
-      // Stop loading spinner
       setIsLoading(false);
 
     }
+
   };
 
   // ==========================================================
-  // Show Authentication Screen
+  // Authentication Screen
   // ==========================================================
   if (!currentUser) {
 
@@ -246,35 +239,44 @@ const App = () => {
       <div className="auth-container">
 
         <h1>Skyline Weather</h1>
-        <p>Real-time atmospheric insights</p>
 
-        {
-          authView === 'login'
-            ? (
-              <Login
-                onLoginSuccess={
-                  handleLoginSuccess
-                }
-                onSwitchToRegister={() =>
-                  setAuthView('register')
-                }
-              />
-            )
-            : (
-              <Register
-                onSwitchToLogin={() =>
-                  setAuthView('login')
-                }
-              />
-            )
-        }
+        <p>
+          Real-time atmospheric insights
+        </p>
+
+        <div className="auth-card">
+
+          {
+            authView === 'login'
+              ? (
+                <Login
+                  onLoginSuccess={
+                    handleLoginSuccess
+                  }
+                  onSwitchToRegister={() =>
+                    setAuthView('register')
+                  }
+                />
+              )
+              : (
+                <Register
+                  onSwitchToLogin={() =>
+                    setAuthView('login')
+                  }
+                />
+              )
+          }
+
+        </div>
 
       </div>
+
     );
+
   }
 
   // ==========================================================
-  // Show Dashboard After Login
+  // Dashboard
   // ==========================================================
   return (
 
@@ -283,17 +285,19 @@ const App = () => {
       <header className="dashboard-header">
 
         <div>
+
           <h2>
             Welcome, {currentUser.fullName}
           </h2>
 
           <p>
-            Home Node:
-            {currentUser.defaultCity}
+            Home City: {currentUser.defaultCity}
           </p>
+
         </div>
 
         <button
+          className="logout-btn"
           onClick={handleLogout}
         >
           Log Out
@@ -303,31 +307,28 @@ const App = () => {
 
       <main className="dashboard-main">
 
-        {/* Search City Component */}
         <SearchBar
           onSearch={handleSearch}
           isLoading={isLoading}
         />
 
-        {/* Loading Spinner */}
         {isLoading && <Loader />}
 
-        {/* Error Message */}
         {error && (
           <ErrorMessage
             message={error}
           />
         )}
 
-        {/* Weather Result */}
-        {weatherData &&
+        {
+          weatherData &&
           !isLoading && (
             <WeatherCard
               data={weatherData}
             />
-        )}
+          )
+        }
 
-        {/* Search History */}
         <SearchHistory
           history={searchHistory}
           onHistoryItemClick={
@@ -338,7 +339,9 @@ const App = () => {
       </main>
 
     </div>
+
   );
+
 };
 
 export default App;

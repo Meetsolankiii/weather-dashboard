@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
 
-// Firebase functions used to read and write data
 import { ref, get, set } from "firebase/database";
-
-// Firebase database connection object
 import { db } from "../firebase";
 
-// Register component
-// onSwitchToLogin -> function used to redirect user to Login page
+import Swal from 'sweetalert2';
+
 const Register = ({ onSwitchToLogin }) => {
 
-  // Stores all registration form fields
   const [formData, setFormData] = useState({
     fullName: '',
     username: '',
@@ -18,17 +14,11 @@ const Register = ({ onSwitchToLogin }) => {
     defaultCity: '',
   });
 
-  // Stores validation and Firebase error messages
-  const [error, setError] = useState('');
-
-  // Used to show registration success message
-  const [success, setSuccess] = useState(false);
-
-  // Controls loading state while registration is processing
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
 
   // =====================================================
-  // Updates form data whenever user types in input fields
+  // Handle Input Changes
   // =====================================================
   const handleChange = (e) => {
 
@@ -40,23 +30,16 @@ const Register = ({ onSwitchToLogin }) => {
   };
 
   // =====================================================
-  // Called when user clicks Sign Up button
+  // Handle Registration
   // =====================================================
   const handleSubmit = async (e) => {
 
-    // Prevent page refresh
     e.preventDefault();
 
-    // Clear previous errors
-    setError('');
-
-    // Convert username to lowercase
-    // Prevents duplicate usernames like:
-    // Meet and meet
     const cleanUsername =
       formData.username.trim().toLowerCase();
 
-    // Validate all required fields
+    // Validate Inputs
     if (
       !formData.fullName.trim() ||
       !cleanUsername ||
@@ -64,22 +47,20 @@ const Register = ({ onSwitchToLogin }) => {
       !formData.defaultCity.trim()
     ) {
 
-      setError('All fields are required.');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Missing Information',
+        text: 'All fields are required.'
+      });
+
       return;
     }
 
-    // Start loading state
     setIsSubmitting(true);
 
     try {
 
-      // =====================================================
-      // Check whether username already exists
-      // Example:
-      // users/meet
-      // users/admin
-      // users/john
-      // =====================================================
+      // Check if username already exists
       const userRef = ref(
         db,
         `users/${cleanUsername}`
@@ -87,88 +68,76 @@ const Register = ({ onSwitchToLogin }) => {
 
       const snapshot = await get(userRef);
 
-      // Prevent duplicate usernames
       if (snapshot.exists()) {
 
-        setError('Username is already taken.');
+        await Swal.fire({
+          icon: 'error',
+          title: 'Registration Failed',
+          text: 'Username is already taken.'
+        });
 
         setIsSubmitting(false);
         return;
       }
 
-      // =====================================================
-      // Save new user profile in Firebase Realtime Database
-      // =====================================================
+      // Save User
       await set(userRef, {
 
-        // User full name
-        fullName: formData.fullName.trim(),
+        fullName:
+          formData.fullName.trim(),
 
-        // Unique username
-        username: cleanUsername,
+        username:
+          cleanUsername,
 
-        // User password
-        // NOTE:
-        // Stored as plain text for project purpose only.
-        // Real applications should hash passwords.
-        password: formData.password,
+        password:
+          formData.password,
 
-        // User's default city
-        // Weather will automatically load for this city
         defaultCity:
           formData.defaultCity.trim(),
+
       });
 
-      // Show success message
-      setSuccess(true);
+      // Success Alert
+      await Swal.fire({
+        icon: 'success',
+        title: 'Registration Successful',
+        text:
+          'Your account has been created successfully.',
+        confirmButtonText: 'Go To Login'
+      });
 
-      // Wait 1.5 seconds then redirect to Login page
-      setTimeout(() => {
-
-        onSwitchToLogin();
-
-      }, 1500);
+      // Redirect to Login Page
+      onSwitchToLogin();
 
     } catch (err) {
 
-      // Firebase database error
-      setError(
-        'Database error. Please verify database URL credentials rules.'
-      );
+      await Swal.fire({
+        icon: 'error',
+        title: 'Database Error',
+        text:
+          'Unable to save user information.'
+      });
+
+      console.error(err);
 
     } finally {
 
-      // Stop loading spinner
       setIsSubmitting(false);
 
     }
+
   };
 
   return (
-    <div className="auth-card">
 
-      {/* Registration page title */}
+    <div>
+
+      {/* Registration Title */}
       <h2>Create Account</h2>
 
-      {/* Small description */}
       <p>
-        Data synced to Live Firebase Engine
+        Create your weather dashboard account
       </p>
-
-      {/* Display error message */}
-      {error && (
-        <div className="auth-error">
-          {error}
-        </div>
-      )}
-
-      {/* Display success message */}
-      {success && (
-        <div className="auth-success">
-          Registration complete!
-          Routing to sign in...
-        </div>
-      )}
 
       {/* Registration Form */}
       <form
@@ -176,7 +145,7 @@ const Register = ({ onSwitchToLogin }) => {
         className="auth-form"
       >
 
-        {/* Full Name Input */}
+        {/* Full Name */}
         <div className="input-group">
 
           <label>Full Name</label>
@@ -185,18 +154,14 @@ const Register = ({ onSwitchToLogin }) => {
             type="text"
             name="fullName"
             value={formData.fullName}
-
-            // Update state while typing
             onChange={handleChange}
-
             placeholder="Meet Solanki"
-
             disabled={isSubmitting}
           />
 
         </div>
 
-        {/* Username Input */}
+        {/* Username */}
         <div className="input-group">
 
           <label>Username</label>
@@ -205,17 +170,14 @@ const Register = ({ onSwitchToLogin }) => {
             type="text"
             name="username"
             value={formData.username}
-
             onChange={handleChange}
-
             placeholder="meetsolanki"
-
             disabled={isSubmitting}
           />
 
         </div>
 
-        {/* Password Input */}
+        {/* Password */}
         <div className="input-group">
 
           <label>Password</label>
@@ -224,17 +186,14 @@ const Register = ({ onSwitchToLogin }) => {
             type="password"
             name="password"
             value={formData.password}
-
             onChange={handleChange}
-
             placeholder="••••••••"
-
             disabled={isSubmitting}
           />
 
         </div>
 
-        {/* Default City Input */}
+        {/* Default City */}
         <div className="input-group">
 
           <label>Default Home City</label>
@@ -243,34 +202,31 @@ const Register = ({ onSwitchToLogin }) => {
             type="text"
             name="defaultCity"
             value={formData.defaultCity}
-
             onChange={handleChange}
-
-            placeholder="e.g., Porbandar"
-
+            placeholder="e.g. Jamnagar"
             disabled={isSubmitting}
           />
 
         </div>
 
-        {/* Sign Up Button */}
+        {/* Submit Button */}
         <button
           type="submit"
           className="auth-btn"
           disabled={isSubmitting}
         >
 
-          {/* Change button text during loading */}
-          {isSubmitting
-            ? 'Writing to DB...'
-            : 'Sign Up'
+          {
+            isSubmitting
+              ? 'Creating Account...'
+              : 'Sign Up'
           }
 
         </button>
 
       </form>
 
-      {/* Redirect to Login Page */}
+      {/* Switch To Login */}
       <p className="auth-footer-text">
 
         Already have an account?
@@ -286,7 +242,9 @@ const Register = ({ onSwitchToLogin }) => {
       </p>
 
     </div>
+
   );
+
 };
 
 export default Register;
