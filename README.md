@@ -33,10 +33,12 @@ A modern and responsive weather dashboard built with **React.js**, **Firebase Re
 
 ## 📂 Project Structure
 
-src/
+├── src/
+│
 ├── Authentication/
 │   ├── Login.js
 │   └── Register.js
+│
 ├── components/
 │   ├── SearchBar.js
 │   ├── WeatherCard.js
@@ -50,11 +52,14 @@ src/
 │   ├── WeatherTips.jsx
 │   ├── TemperatureChart.jsx
 │   └── WeatherComparison.jsx
+│
 ├── services/
 │   └── weatherApi.js
+│
 ├── firebase.js
 ├── App.js
-└── App.css
+├── App.css
+└── index.js
 
 ## 🛠️ Tech Stack
 
