@@ -40,43 +40,7 @@ const App = () => {
   // Search history
   const [searchHistory, setSearchHistory] = useState([]);
 
-  // ==========================================================
-  // Load user-specific information
-  // ==========================================================
-  const loadUserData = async (user) => {
-
-    // Automatically load weather of user's default city
-    handleSearch(user.defaultCity);
-
-    try {
-
-      const historyRef = ref(
-        db,
-        `history/${user.username}`
-      );
-
-      const snapshot = await get(historyRef);
-
-      if (snapshot.exists()) {
-
-        setSearchHistory(snapshot.val());
-
-      } else {
-
-        setSearchHistory([]);
-
-      }
-
-    } catch (err) {
-
-      console.error(
-        "Error reading history from Firebase:",
-        err
-      );
-
-    }
-
-  };
+  
 
 // ==========================================================
 // Login Success
