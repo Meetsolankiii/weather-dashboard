@@ -16,6 +16,10 @@ const Login = ({
   const [isLoggingIn, setIsLoggingIn] =
     useState(false);
 
+  // SHOW / HIDE PASSWORD STATE
+  const [showPassword, setShowPassword] =
+    useState(false);
+
   const handleSubmit = async (e) => {
 
     e.preventDefault();
@@ -45,7 +49,6 @@ const Login = ({
 
       const snapshot = await get(userRef);
 
-      // User not found
       if (!snapshot.exists()) {
 
         await Swal.fire({
@@ -60,7 +63,6 @@ const Login = ({
 
       const userData = snapshot.val();
 
-      // Wrong password
       if (userData.password !== password) {
 
         await Swal.fire({
@@ -73,7 +75,6 @@ const Login = ({
         return;
       }
 
-      // Success Alert
       await Swal.fire({
         icon: 'success',
         title: 'Login Successful',
@@ -82,7 +83,6 @@ const Login = ({
         showConfirmButton: false
       });
 
-      // Redirect to Dashboard
       onLoginSuccess(userData);
 
     } catch (err) {
@@ -133,19 +133,44 @@ const Login = ({
 
         </div>
 
+        {/* PASSWORD FIELD */}
         <div className="input-group">
 
           <label>Password</label>
 
-          <input
-            type="password"
-            value={password}
-            onChange={(e) =>
-              setPassword(e.target.value)
-            }
-            placeholder="••••••••"
-            disabled={isLoggingIn}
-          />
+          <div className="password-container">
+
+            <input
+              type={
+                showPassword
+                  ? "text"
+                  : "password"
+              }
+              value={password}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
+              placeholder="••••••••"
+              disabled={isLoggingIn}
+            />
+
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() =>
+                setShowPassword(
+                  !showPassword
+                )
+              }
+            >
+              {
+                showPassword
+                  ? "🙈"
+                  : "👁️"
+              }
+            </button>
+
+          </div>
 
         </div>
 
